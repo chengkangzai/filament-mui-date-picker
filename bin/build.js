@@ -43,10 +43,37 @@ const defaultOptions = {
     }],
 }
 
+// Alpine bridge component (small, loaded via x-load-src)
+compile({
+    ...defaultOptions,
+    entryPoints: ['./resources/js/components/mui-date-picker.js'],
+    outfile: './resources/dist/components/mui-date-picker.js',
+}).then(() => {
+    console.log('Build completed for Alpine bridge')
+})
+
+// React bundle (IIFE format, loaded via x-load-js)
 compile({
     ...defaultOptions,
     entryPoints: ['./resources/js/index.js'],
-    outfile: './resources/dist/skeleton.js',
+    outfile: './resources/dist/mui-date-picker.js',
+    platform: 'browser',
+    format: 'iife',
+    globalName: 'MuiDatePickerReact',
+    loader: {
+        '.js': 'jsx',
+        '.jsx': 'jsx',
+    },
+    jsx: 'automatic',
 }).then(() => {
-    console.log(`Build completed for skeleton.js`)
+    console.log('Build completed for React bundle')
+})
+
+// CSS
+compile({
+    ...defaultOptions,
+    entryPoints: ['./resources/css/index.css'],
+    outfile: './resources/dist/mui-date-picker.css',
+}).then(() => {
+    console.log('Build completed for CSS')
 })

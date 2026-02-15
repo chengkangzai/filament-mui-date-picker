@@ -1,1 +1,13 @@
-@import '../../vendor/filament/filament/resources/css/theme.css';
+.fi-fo-mui-date-picker {
+    position: relative;
+    width: 100%;
+}
+
+.fi-fo-mui-date-picker-container {
+    width: 100%;
+}
+
+/* Match Filament's font in MUI components */
+.fi-fo-mui-date-picker .MuiInputBase-root {
+    font-family: inherit;
+}
