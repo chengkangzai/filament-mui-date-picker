@@ -79,7 +79,13 @@ class MuiDatePicker extends Field implements HasAffixActions
                 return null;
             }
 
-            return Carbon::parse($state)->format($component->getFormat());
+            if ($state instanceof CarbonInterface) {
+                return $state->format($component->getFormat());
+            }
+
+            return Carbon::parse($state)
+                ->shiftTimezone($component->getTimezone())
+                ->format($component->getFormat());
         });
 
         $this->dehydrateStateUsing(static function (MuiDatePicker $component, $state): ?string {
@@ -87,7 +93,13 @@ class MuiDatePicker extends Field implements HasAffixActions
                 return null;
             }
 
-            return Carbon::parse($state)->format($component->getFormat());
+            if ($state instanceof CarbonInterface) {
+                return $state->format($component->getFormat());
+            }
+
+            return Carbon::parse($state)
+                ->shiftTimezone($component->getTimezone())
+                ->format($component->getFormat());
         });
     }
 
