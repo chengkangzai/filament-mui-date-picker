@@ -84,7 +84,7 @@ class MuiDatePicker extends Field implements HasAffixActions
             }
 
             return Carbon::parse($state)
-                ->shiftTimezone($component->getTimezone())
+                ->setTimezone($component->getTimezone())
                 ->format($component->getFormat());
         });
 
@@ -98,7 +98,7 @@ class MuiDatePicker extends Field implements HasAffixActions
             }
 
             return Carbon::parse($state)
-                ->shiftTimezone($component->getTimezone())
+                ->setTimezone($component->getTimezone())
                 ->format($component->getFormat());
         });
     }
