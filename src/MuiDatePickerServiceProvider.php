@@ -47,7 +47,7 @@ class MuiDatePickerServiceProvider extends PackageServiceProvider
 
     protected function getAssetPackageName(): ?string
     {
-        return 'cck/filament-mui-date-picker';
+        return 'chengkangzai/filament-mui-date-picker';
     }
 
     /**

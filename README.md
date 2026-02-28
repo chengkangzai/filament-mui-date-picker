@@ -3,8 +3,8 @@
 A [Filament](https://filamentphp.com) form field powered by [MUI X Date Pickers](https://mui.com/x/react-date-pickers/) and React. It renders a fully-featured Material UI date picker inside your Filament panels with seamless Livewire two-way binding, dark mode support, and built-in localization for 40+ languages.
 
 <!--
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/cck/filament-mui-date-picker.svg?style=flat-square)](https://packagist.org/packages/cck/filament-mui-date-picker)
-[![Total Downloads](https://img.shields.io/packagist/dt/cck/filament-mui-date-picker.svg?style=flat-square)](https://packagist.org/packages/cck/filament-mui-date-picker)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/chengkangzai/filament-mui-date-picker.svg?style=flat-square)](https://packagist.org/packages/chengkangzai/filament-mui-date-picker)
+[![Total Downloads](https://img.shields.io/packagist/dt/chengkangzai/filament-mui-date-picker.svg?style=flat-square)](https://packagist.org/packages/chengkangzai/filament-mui-date-picker)
 -->
 
 <!--
@@ -47,7 +47,7 @@ TODO: Add screenshots showing the date picker in light mode, dark mode, mobile v
 Install the package via Composer:
 
 ```bash
-composer require cck/filament-mui-date-picker
+composer require chengkangzai/filament-mui-date-picker
 ```
 
 Register the plugin in your Filament panel provider:
@@ -534,7 +534,7 @@ Please review [our security policy](.github/SECURITY.md) on how to report securi
 
 ## Credits
 
-- [cck](https://github.com/cck)
+- [chengkangzai](https://github.com/chengkangzai)
 - [All Contributors](../../contributors)
 
 ## License

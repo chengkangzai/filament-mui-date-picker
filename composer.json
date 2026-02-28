@@ -1,8 +1,8 @@
 {
-    "name": "cck/filament-mui-date-picker",
+    "name": "chengkangzai/filament-mui-date-picker",
     "description": "A Filament form field that replicates MUI's DatePicker with full Livewire integration",
     "keywords": [
-        "cck",
+        "chengkangzai",
         "laravel",
         "filamentphp",
         "filament",
@@ -10,15 +10,15 @@
         "mui-date-picker",
         "date-picker"
     ],
-    "homepage": "https://github.com/cck/filament-mui-date-picker",
+    "homepage": "https://github.com/chengkangzai/filament-mui-date-picker",
     "support": {
-        "issues": "https://github.com/cck/filament-mui-date-picker/issues",
-        "source": "https://github.com/cck/filament-mui-date-picker"
+        "issues": "https://github.com/chengkangzai/filament-mui-date-picker/issues",
+        "source": "https://github.com/chengkangzai/filament-mui-date-picker"
     },
     "license": "MIT",
     "authors": [
         {
-            "name": "cck",
+            "name": "chengkangzai",
             "role": "Developer"
         }
     ],
