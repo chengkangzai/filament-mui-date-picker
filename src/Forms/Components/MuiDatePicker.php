@@ -2,6 +2,7 @@
 
 namespace Cck\FilamentMuiDatePicker\Forms\Components;
 
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Closure;
 use Filament\Forms\Components\Concerns\CanBeReadOnly;
@@ -72,6 +73,22 @@ class MuiDatePicker extends Field implements HasAffixActions
         parent::setUp();
 
         $this->rule('date');
+
+        $this->formatStateUsing(static function (MuiDatePicker $component, $state): ?string {
+            if (blank($state)) {
+                return null;
+            }
+
+            return Carbon::parse($state)->format($component->getFormat());
+        });
+
+        $this->dehydrateStateUsing(static function (MuiDatePicker $component, $state): ?string {
+            if (blank($state)) {
+                return null;
+            }
+
+            return Carbon::parse($state)->format($component->getFormat());
+        });
     }
 
     public function displayFormat(string | Closure | null $format): static
