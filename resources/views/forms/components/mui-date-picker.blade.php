@@ -14,7 +14,7 @@
 >
     <div
         x-load
-        x-load-src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('mui-date-picker', 'cck/filament-mui-date-picker') }}"
+        x-load-src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('mui-date-picker', 'chengkangzai/filament-mui-date-picker') }}"
         x-data="muiDatePickerFormComponent({
             state: $wire.{{ $applyStateBindingModifiers("\$entangle('{$statePath}')") }},
             config: @js($reactConfig),
