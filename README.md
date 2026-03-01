@@ -30,10 +30,10 @@ TODO: Add screenshots showing the date picker in light mode, dark mode, mobile v
 
 ## Version Compatibility
 
-| Plugin Branch | Filament | Laravel | PHP |
+| Plugin Version | Filament | Laravel | PHP |
 |---|---|---|---|
-| `5.x` | 5.x | 12.x | 8.2+ |
-| `4.x` | 4.x | 11.x, 12.x | 8.2+ |
+| 2.x | 5.x | 12.x | 8.2+ |
+| 1.x | 4.x | 11.x, 12.x | 8.2+ |
 
 ## Requirements
 
