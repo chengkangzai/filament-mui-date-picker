@@ -79,18 +79,27 @@ class MuiDatePicker extends Field implements HasAffixActions
                 return null;
             }
 
+            $format = $component->getFormat();
+            $timezone = $component->getTimezone();
+
             // Carbon instances (from datetime model casts) need timezone
             // conversion to extract the correct date in the configured timezone.
             if ($state instanceof CarbonInterface) {
-                return $state
-                    ->setTimezone($component->getTimezone())
-                    ->format($component->getFormat());
+                return $state->setTimezone($timezone)->format($format);
             }
 
-            // String states (from date columns or prior form submissions)
-            // are already date-only — no timezone conversion needed as it
-            // would incorrectly shift the date in negative UTC offsets.
-            return Carbon::parse($state)->format($component->getFormat());
+            // Datetime strings (e.g., Livewire serializes Carbon date casts
+            // to UTC ISO strings like '1985-11-16T16:00:00.000000Z') contain
+            // time info and need timezone conversion to recover the correct
+            // local date.
+            if (preg_match('/\d{2}:\d{2}/', $state)) {
+                return Carbon::parse($state)->setTimezone($timezone)->format($format);
+            }
+
+            // Simple date strings (YYYY-MM-DD from the client or database)
+            // have no time component — no timezone conversion needed as it
+            // would incorrectly shift the date.
+            return Carbon::parse($state)->format($format);
         });
 
         $this->dehydrateStateUsing(static function (MuiDatePicker $component, $state): ?string {
@@ -98,13 +107,23 @@ class MuiDatePicker extends Field implements HasAffixActions
                 return null;
             }
 
+            $format = $component->getFormat();
+
             if ($state instanceof CarbonInterface) {
-                return $state->format($component->getFormat());
+                return $state->format($format);
             }
 
-            // State from the client is always a date string (YYYY-MM-DD) —
+            // Datetime strings (from Livewire serialization) need timezone
+            // conversion to extract the correct local date.
+            if (preg_match('/\d{2}:\d{2}/', $state)) {
+                return Carbon::parse($state)
+                    ->setTimezone($component->getTimezone())
+                    ->format($format);
+            }
+
+            // Simple date strings (YYYY-MM-DD from the client) —
             // no timezone conversion needed.
-            return Carbon::parse($state)->format($component->getFormat());
+            return Carbon::parse($state)->format($format);
         });
     }
 
