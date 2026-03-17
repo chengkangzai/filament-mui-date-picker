@@ -79,13 +79,18 @@ class MuiDatePicker extends Field implements HasAffixActions
                 return null;
             }
 
+            // Carbon instances (from datetime model casts) need timezone
+            // conversion to extract the correct date in the configured timezone.
             if ($state instanceof CarbonInterface) {
-                return $state->format($component->getFormat());
+                return $state
+                    ->setTimezone($component->getTimezone())
+                    ->format($component->getFormat());
             }
 
-            return Carbon::parse($state)
-                ->setTimezone($component->getTimezone())
-                ->format($component->getFormat());
+            // String states (from date columns or prior form submissions)
+            // are already date-only — no timezone conversion needed as it
+            // would incorrectly shift the date in negative UTC offsets.
+            return Carbon::parse($state)->format($component->getFormat());
         });
 
         $this->dehydrateStateUsing(static function (MuiDatePicker $component, $state): ?string {
@@ -97,9 +102,9 @@ class MuiDatePicker extends Field implements HasAffixActions
                 return $state->format($component->getFormat());
             }
 
-            return Carbon::parse($state)
-                ->setTimezone($component->getTimezone())
-                ->format($component->getFormat());
+            // State from the client is always a date string (YYYY-MM-DD) —
+            // no timezone conversion needed.
+            return Carbon::parse($state)->format($component->getFormat());
         });
     }
 

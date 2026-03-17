@@ -17,9 +17,10 @@
         x-load-src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('mui-date-picker', 'chengkangzai/filament-mui-date-picker') }}"
         x-data="muiDatePickerFormComponent({
             state: $wire.{{ $applyStateBindingModifiers("\$entangle('{$statePath}')") }},
+            statePath: @js($statePath),
             config: @js($reactConfig),
         })"
-        wire:ignore
+        wire:ignore.self
         wire:key="{{ $livewireKey }}"
         {{ $getExtraAlpineAttributeBag() }}
         @class(['fi-fo-mui-date-picker'])
@@ -31,6 +32,7 @@
         />
 
         <div
+            wire:ignore
             x-ref="reactContainer"
             class="fi-fo-mui-date-picker-container"
         ></div>

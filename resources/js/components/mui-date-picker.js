@@ -1,6 +1,7 @@
-export default function muiDatePickerFormComponent({ state, config }) {
+export default function muiDatePickerFormComponent({ state, statePath, config }) {
     return {
         state,
+        statePath,
         config,
         reactInstance: null,
         _darkModeObserver: null,
@@ -40,6 +41,11 @@ export default function muiDatePickerFormComponent({ state, config }) {
                 {
                     onChange: (value) => {
                         this.state = value
+
+                        // Explicitly sync to Livewire to ensure the value
+                        // reaches the server on form submit, even if the
+                        // deferred $entangle sync is unreliable with wire:ignore.
+                        this.$wire.set(this.statePath, value)
                     },
                     onOpen: () => {},
                     onClose: () => {},
