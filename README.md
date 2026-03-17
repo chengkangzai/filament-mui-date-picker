@@ -28,18 +28,11 @@ TODO: Add screenshots showing the date picker in light mode, dark mode, mobile v
 - Supports `readOnly`, `disabled`, `required`, `placeholder`, and all standard Filament field features
 - Display format and storage format can be configured independently
 
-## Version Compatibility
-
-| Plugin Version | Filament | Laravel | PHP |
-|---|---|---|---|
-| 2.x | 5.x | 12.x | 8.2+ |
-| 1.x | 4.x | 11.x, 12.x | 8.2+ |
-
 ## Requirements
 
 - PHP 8.2+
-- Laravel 12
-- Filament 5.x
+- Laravel 11 or 12
+- Filament 4.x or 5.x
 - Node.js (for building assets during development only)
 
 ## Installation
