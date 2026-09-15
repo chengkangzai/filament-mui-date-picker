@@ -2,6 +2,28 @@
 
 All notable changes to `:package_name` will be documented in this file.
 
+## v3.0.2 - 2026-09-15
+
+### What changed
+
+The React + MUI bundle and its stylesheet now load **on request** instead of on every page.
+
+Both were registered as plain assets, so `@filamentScripts` / `@filamentStyles` emitted them wherever a host application called those directives — and applications call them from a **shared layout**. The result was an ~880KB (raw) parser-blocking bundle downloading on every page using that layout, not only the pages with a date field.
+
+Measured on a customer-facing portal built with this package: **240KB gzipped, a third of the page's entire first-load payload, on routes with no date input anywhere.**
+
+Both assets are now `loadedOnRequest()`, and the field's own view pulls them in with `x-load-js` / `x-load-css` alongside the `x-load-src` it already had.
+
+### Upgrading
+
+Nothing to do. No API change, no config, no published assets to refresh.
+
+Applications that render a picker behave identically — `mountReact()` already polled for `window.MuiDatePickerReact` until it resolved, so a global arriving after Alpine initialises is the case that code was written for. Applications that do not render one stop paying for a bundle they never used.
+
+If you previously published this package's view to work around the eager load, you can drop your copy and go back to the package's.
+
+**Full Changelog**: https://github.com/chengkangzai/filament-mui-date-picker/compare/v3.0.1...v3.0.2
+
 ## v3.0.1 - 2026-03-17
 
 ### Bug Fix
@@ -34,6 +56,7 @@ This release consolidates the previously separate `4.x` and `5.x` branches into 
 
 ```bash
 composer require chengkangzai/filament-mui-date-picker "^3.0"
+
 
 
 ```
