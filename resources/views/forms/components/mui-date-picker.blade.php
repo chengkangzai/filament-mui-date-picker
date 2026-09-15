@@ -15,6 +15,14 @@
     <div
         x-load
         x-load-src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('mui-date-picker', 'chengkangzai/filament-mui-date-picker') }}"
+        {{-- The React + MUI bundle and its stylesheet are registered loadedOnRequest, so they
+             are pulled in here rather than by @filamentScripts / @filamentStyles. A host
+             application calls those from a shared layout, which meant an ~880KB parser-blocking
+             bundle downloaded on every page using that layout, including pages with no date
+             field. muiDatePickerFormComponent() already polls for window.MuiDatePickerReact
+             until it appears, so arriving after Alpine initialises is the expected case. --}}
+        x-load-js="{{ \Illuminate\Support\Js::from([\Filament\Support\Facades\FilamentAsset::getScriptSrc('mui-date-picker-react', 'chengkangzai/filament-mui-date-picker')]) }}"
+        x-load-css="{{ \Illuminate\Support\Js::from([\Filament\Support\Facades\FilamentAsset::getStyleHref('mui-date-picker-styles', 'chengkangzai/filament-mui-date-picker')]) }}"
         x-data="muiDatePickerFormComponent({
             state: $wire.{{ $applyStateBindingModifiers("\$entangle('{$statePath}')") }},
             statePath: @js($statePath),
