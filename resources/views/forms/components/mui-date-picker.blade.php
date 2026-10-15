@@ -44,7 +44,6 @@
         <input
             type="hidden"
             x-model="state"
-            @if ($id) id="{{ $id }}" @endif
         />
 
         <div

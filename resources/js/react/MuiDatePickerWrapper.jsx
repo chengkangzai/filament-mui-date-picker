@@ -154,6 +154,16 @@ export default function MuiDatePickerWrapper({
                 size: 'small',
                 fullWidth: true,
                 variant: 'outlined',
+                // Filament's <label for> targets the field id, so the visible input takes it.
+                id: config.id || undefined,
+                name: config.name || undefined,
+                required: config.required || false,
+                // Only force the error on; otherwise leave MUI's own validation state alone.
+                ...(config.error ? { error: true } : {}),
+                inputProps: {
+                    'aria-describedby': config.describedBy || undefined,
+                    'aria-label': config.ariaLabel || undefined,
+                },
             },
             toolbar: {
                 hidden: !config.showToolbar,

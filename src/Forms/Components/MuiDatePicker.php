@@ -517,6 +517,7 @@ class MuiDatePicker extends Field implements HasAffixActions
             'placeholder' => $this->getPlaceholder(),
             'readOnly' => $this->isReadOnly(),
             'disabled' => $this->isDisabled(),
+            ...$this->getAccessibilityConfig(),
         ], fn ($value) => ! is_null($value));
 
         $localeText = $this->resolveLocaleText();
@@ -526,6 +527,36 @@ class MuiDatePicker extends Field implements HasAffixActions
         }
 
         return $config;
+    }
+
+    /**
+     * The visible MUI input replaces Filament's input, so it takes the field id (the label's
+     * `for` target), the required and error state, and the helper/error description ids.
+     *
+     * @return array<string, mixed>
+     */
+    protected function getAccessibilityConfig(): array
+    {
+        $hasError = $this->callIfAvailable('hasValidationError', fn (): bool => (bool) view()->shared('errors')?->has($this->getStatePath()));
+        $describedBy = implode(' ', $this->callIfAvailable('getDescriptionIds', fn (): array => []));
+
+        return [
+            'id' => $this->getId(),
+            'name' => $this->getStatePath(),
+            'required' => $this->isRequired() && (! $this->isDisabled()) && (! $this->isReadOnly()),
+            'error' => $hasError,
+            'describedBy' => filled($describedBy) ? $describedBy : null,
+            'ariaLabel' => $this->isLabelHidden() ? strip_tags((string) $this->getLabel()) : null,
+        ];
+    }
+
+    /**
+     * getDescriptionIds() and hasValidationError() only exist from Filament 5.10, and this
+     * plugin still supports Filament 4 and earlier 5.x releases.
+     */
+    protected function callIfAvailable(string $method, Closure $fallback): mixed
+    {
+        return method_exists($this, $method) ? $this->{$method}() : $fallback();
     }
 
     /**
