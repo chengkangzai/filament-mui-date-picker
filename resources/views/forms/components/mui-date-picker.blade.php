@@ -26,13 +26,21 @@
         x-data="muiDatePickerFormComponent({
             state: $wire.{{ $applyStateBindingModifiers("\$entangle('{$statePath}')") }},
             statePath: @js($statePath),
-            config: @js($reactConfig),
         })"
         wire:ignore.self
         wire:key="{{ $livewireKey }}"
         {{ $getExtraAlpineAttributeBag() }}
         @class(['fi-fo-mui-date-picker'])
     >
+        {{-- Outside the wire:ignore'd React container so Livewire morphs it on every render;
+             the Alpine bridge watches this attribute and passes the new config to React. --}}
+        <div
+            x-ref="config"
+            data-mui-date-picker-config="{{ json_encode($reactConfig) }}"
+            data-state-path="{{ $statePath }}"
+            hidden
+        ></div>
+
         <input
             type="hidden"
             x-model="state"

@@ -1,14 +1,26 @@
-export default function muiDatePickerFormComponent({ state, statePath, config }) {
+export default function muiDatePickerFormComponent({
+    state,
+    statePath,
+    config = {},
+}) {
     return {
         state,
         statePath,
         config,
         reactInstance: null,
         _darkModeObserver: null,
+        _configObserver: null,
         _primaryColor: null,
 
         init() {
             this._primaryColor = this.getPrimaryColor()
+
+            // The React container is wire:ignore'd, so the server renders the config into an
+            // attribute outside it. Livewire morphs that attribute on every render; watching it
+            // keeps closures such as minDate(fn (Get $get) => ...), disabled() and the error
+            // state current without remounting React (which would drop focus and open state).
+            this.config = this.readConfig() ?? this.config
+            this.observeConfig()
 
             this.$nextTick(() => {
                 this.mountReact()
@@ -51,6 +63,41 @@ export default function muiDatePickerFormComponent({ state, statePath, config })
                     onClose: () => {},
                 },
             )
+        },
+
+        readConfig() {
+            const json = this.$refs.config?.getAttribute(
+                'data-mui-date-picker-config',
+            )
+
+            if (!json) return null
+
+            try {
+                return JSON.parse(json)
+            } catch {
+                return null
+            }
+        },
+
+        observeConfig() {
+            if (!this.$refs.config) return
+
+            this._configObserver = new MutationObserver(() => {
+                const config = this.readConfig()
+
+                if (!config) return
+
+                this.config = config
+
+                if (this.reactInstance) {
+                    this.reactInstance.update(this.buildConfig(this.state))
+                }
+            })
+
+            this._configObserver.observe(this.$refs.config, {
+                attributes: true,
+                attributeFilter: ['data-mui-date-picker-config'],
+            })
         },
 
         buildConfig(value) {
@@ -99,6 +146,11 @@ export default function muiDatePickerFormComponent({ state, statePath, config })
             if (this.reactInstance) {
                 this.reactInstance.unmount()
                 this.reactInstance = null
+            }
+
+            if (this._configObserver) {
+                this._configObserver.disconnect()
+                this._configObserver = null
             }
 
             if (this._darkModeObserver) {

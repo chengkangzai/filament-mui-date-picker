@@ -6,7 +6,12 @@ import MuiDatePickerWrapper from './MuiDatePickerWrapper'
 import { buildTheme } from './theme'
 import { resolveLocale } from './locales'
 
-export default function MuiDatePickerApp({ config, onChange, onOpen, onClose }) {
+export default function MuiDatePickerApp({
+    config,
+    onChange,
+    onOpen,
+    onClose,
+}) {
     const theme = useMemo(
         () => buildTheme(config.colorScheme, config.primaryColor),
         [config.colorScheme, config.primaryColor],
