@@ -1,5 +1,8 @@
 import { resolvePrimaryColor } from './primary-color'
 
+const MOUNT_RETRY_INTERVAL = 100
+const MOUNT_MAX_ATTEMPTS = 100 // ~10 seconds
+
 export default function muiDatePickerFormComponent({
     state,
     statePath,
@@ -15,6 +18,9 @@ export default function muiDatePickerFormComponent({
         _darkModeObserver: null,
         _configObserver: null,
         _primaryColor: null,
+        _mountTimer: null,
+        _mountAttempts: 0,
+        _destroyed: false,
 
         init() {
             this._primaryColor = this.getPrimaryColor()
@@ -42,12 +48,27 @@ export default function muiDatePickerFormComponent({
         },
 
         mountReact() {
+            this._mountTimer = null
+
             const container = this.$refs.reactContainer
 
-            if (!container) return
+            if (!container || this._destroyed) return
 
             if (!window.MuiDatePickerReact?.mount) {
-                setTimeout(() => this.mountReact(), 100)
+                if (++this._mountAttempts >= MOUNT_MAX_ATTEMPTS) {
+                    console.error(
+                        `[mui-date-picker] The date picker bundle did not load for "${this.statePath}"; showing a plain date input instead.`,
+                    )
+                    this.renderFallback(container)
+
+                    return
+                }
+
+                this._mountTimer = setTimeout(
+                    () => this.mountReact(),
+                    MOUNT_RETRY_INTERVAL,
+                )
+
                 return
             }
 
@@ -60,6 +81,32 @@ export default function muiDatePickerFormComponent({
                     onClose: () => {},
                 },
             )
+        },
+
+        renderFallback(container) {
+            const message = document.createElement('p')
+            message.className = 'fi-fo-mui-date-picker-fallback-message'
+            message.textContent =
+                'The date picker could not be loaded. Enter the date below.'
+
+            const input = document.createElement('input')
+            input.type = 'date'
+            input.className = 'fi-input fi-fo-mui-date-picker-fallback-input'
+            input.value = this.state ?? ''
+
+            if (this.config.id) input.id = this.config.id
+            if (this.config.name) input.name = this.config.name
+            if (this.config.minDate) input.min = this.config.minDate
+            if (this.config.maxDate) input.max = this.config.maxDate
+            input.required = Boolean(this.config.required)
+            input.disabled = Boolean(this.config.disabled)
+            input.readOnly = Boolean(this.config.readOnly)
+
+            input.addEventListener('change', () =>
+                this.commit(input.value || null),
+            )
+
+            container.replaceChildren(message, input)
         },
 
         // One write per picked date, straight to $wire (47c0c86: the deferred $entangle sync
@@ -140,6 +187,13 @@ export default function muiDatePickerFormComponent({
         },
 
         destroy() {
+            this._destroyed = true
+
+            if (this._mountTimer) {
+                clearTimeout(this._mountTimer)
+                this._mountTimer = null
+            }
+
             if (this.reactInstance) {
                 this.reactInstance.unmount()
                 this.reactInstance = null
