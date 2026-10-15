@@ -2,6 +2,35 @@
 
 All notable changes to `:package_name` will be documented in this file.
 
+## v3.0.4 - 2026-10-15
+
+### What changed
+
+v3.0.3 stopped the picker saving dates the user never picked. This release fixes the gaps a code review found in how it decides a date is **finished**:
+
+- **The pre-highlighted day was dropped.** After you choose a year and month, MUI highlights a day. Clicking that day fires no change, so v3.0.3 threw the pick away. It is now saved.
+- **Today button.** With `->showTodayButton()`, a draft that happened to equal today was saved without Today being clicked.
+- **Going back.** With `->closeOnDateSelection(false)`, picking a day and then changing the year saved the unfinished date on Escape.
+- **Static variant.** Year-only picks were saved.
+- **Typed dates.** A typed date the picker rejects, such as one past `maxDate`, was saved.
+
+A date now counts as finished only after:
+
+- a click on an item in the last view
+- a click on the action bar (Clear, Today, OK)
+- a complete typed date that passes the picker's validation
+
+### Upgrading
+
+```bash
+composer update chengkangzai/filament-mui-date-picker
+php artisan filament:assets
+
+```
+There are no API or config changes.
+
+**Full Changelog**: https://github.com/chengkangzai/filament-mui-date-picker/compare/v3.0.3...v3.0.4
+
 ## v3.0.3 - 2026-10-15
 
 ### What changed
@@ -27,6 +56,7 @@ Re-publish the assets after updating:
 ```bash
 composer update chengkangzai/filament-mui-date-picker
 php artisan filament:assets
+
 
 ```
 There are no API or config changes. A partial pick no longer reaches Livewire, so `live()` fields stop firing an update for each year or month tap.
@@ -91,6 +121,7 @@ This release consolidates the previously separate `4.x` and `5.x` branches into 
 
 ```bash
 composer require chengkangzai/filament-mui-date-picker "^3.0"
+
 
 
 
