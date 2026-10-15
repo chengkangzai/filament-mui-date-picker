@@ -16,15 +16,17 @@ export default function MuiDatePickerWrapper({
 
     // The picker shows a draft; only a finished date is committed to Livewire. MUI reports a
     // full date as soon as a year or month is tapped (today's day and month filled in), so
-    // committing every change saved "birthdays" nobody chose.
+    // committing every change saved "birthdays" nobody chose. A date is finished when the user
+    // clicks an item in the last view (even the one already highlighted, which fires no
+    // change), or an action-bar button (Clear, Today, OK), or types a complete valid date.
     const [draft, setDraft] = useState(() => toDayjs(config.value))
     const committed = useRef(config.value ?? null)
-    const isOpen = useRef(false)
-    const currentView = useRef(openTo)
-    const pickedInFinalView = useRef(false)
+    const isOpen = useRef(config.variant === 'static')
+    const deliberate = useRef(false)
 
     useEffect(() => {
         committed.current = config.value ?? null
+        deliberate.current = false
         setDraft(toDayjs(config.value))
     }, [config.value])
 
@@ -40,55 +42,69 @@ export default function MuiDatePickerWrapper({
         [onChange],
     )
 
+    const markDeliberate = useCallback(
+        (view) => () => {
+            if (view === finalView) {
+                deliberate.current = true
+            }
+        },
+        [finalView],
+    )
+
     const handleChange = useCallback(
-        (newValue) => {
+        (newValue, context) => {
             setDraft(newValue)
 
-            if (isOpen.current && currentView.current === finalView) {
-                pickedInFinalView.current = true
+            if (config.variant === 'static') {
+                if (deliberate.current) commit(newValue)
+                return
             }
 
-            // Typing in the field: commit once the date is complete and valid.
-            if (!isOpen.current && (newValue === null || newValue.isValid())) {
+            // Typing in the field: commit once the date is complete and the picker accepts it.
+            if (
+                !isOpen.current &&
+                !context?.validationError &&
+                (newValue === null || newValue.isValid())
+            ) {
                 commit(newValue)
             }
         },
-        [commit, finalView],
+        [commit, config.variant],
     )
 
     const handleAccept = useCallback(
         (newValue) => {
-            const finished =
-                newValue === null ||
-                pickedInFinalView.current ||
-                isTodayButton(newValue, config)
-
-            if (finished) {
+            if (newValue === null || deliberate.current) {
                 commit(newValue)
                 return
             }
 
             setDraft(toDayjs(committed.current))
         },
-        [commit, config],
+        [commit],
     )
 
     const handleOpen = useCallback(() => {
         isOpen.current = true
-        currentView.current = openTo
-        pickedInFinalView.current = false
+        deliberate.current = false
         onOpen?.()
-    }, [onOpen, openTo])
+    }, [onOpen])
 
     const handleClose = useCallback(() => {
         isOpen.current = false
+        deliberate.current = false
         setDraft(toDayjs(committed.current))
         onClose?.()
     }, [onClose])
 
-    const handleViewChange = useCallback((view) => {
-        currentView.current = view
-    }, [])
+    const handleViewChange = useCallback(
+        (view) => {
+            if (view !== finalView) {
+                deliberate.current = false
+            }
+        },
+        [finalView],
+    )
 
     const shouldDisableDate = useMemo(() => {
         if (!config.disabledDates?.length) return undefined
@@ -142,10 +158,16 @@ export default function MuiDatePickerWrapper({
             toolbar: {
                 hidden: !config.showToolbar,
             },
-            actionBar: actionBarActions
-                ? { actions: actionBarActions }
-                : undefined,
+            actionBar: {
+                ...(actionBarActions ? { actions: actionBarActions } : {}),
+                onClickCapture: () => {
+                    deliberate.current = true
+                },
+            },
+            yearButton: { onClickCapture: markDeliberate('year') },
+            monthButton: { onClickCapture: markDeliberate('month') },
             day: {
+                onClickCapture: markDeliberate('day'),
                 sx: {
                     '&.Mui-selected': {
                         fontWeight: 600,
@@ -172,9 +194,4 @@ export default function MuiDatePickerWrapper({
 
 function toDayjs(value) {
     return value ? dayjs(value) : null
-}
-
-// The action bar's Today button is a complete, deliberate choice from any view.
-function isTodayButton(value, config) {
-    return Boolean(config.showTodayButton) && value.isSame(dayjs(), 'day')
 }
