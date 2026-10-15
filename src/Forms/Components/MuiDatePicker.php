@@ -2,16 +2,20 @@
 
 namespace Cck\FilamentMuiDatePicker\Forms\Components;
 
-use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Carbon\Exceptions\InvalidFormatException;
+use Cck\FilamentMuiDatePicker\Forms\Components\StateCasts\MuiDateStateCast;
 use Closure;
+use DateTimeInterface;
 use Filament\Forms\Components\Concerns\CanBeReadOnly;
 use Filament\Forms\Components\Concerns\HasAffixes;
 use Filament\Forms\Components\Concerns\HasExtraInputAttributes;
 use Filament\Forms\Components\Concerns\HasPlaceholder;
 use Filament\Forms\Components\Field;
 use Filament\Schemas\Components\Contracts\HasAffixActions;
+use Filament\Schemas\Components\StateCasts\Contracts\StateCast;
 use Filament\Support\Concerns\HasExtraAlpineAttributes;
+use Illuminate\Support\Carbon;
 
 class MuiDatePicker extends Field implements HasAffixActions
 {
@@ -74,57 +78,57 @@ class MuiDatePicker extends Field implements HasAffixActions
 
         $this->rule('date');
 
-        $this->formatStateUsing(static function (MuiDatePicker $component, $state): ?string {
-            if (blank($state)) {
-                return null;
-            }
+        $this->rule(
+            static fn (MuiDatePicker $component): string => "after_or_equal:{$component->getMinDate()}",
+            static fn (MuiDatePicker $component): bool => filled($component->getMinDate()),
+        );
 
-            $format = $component->getFormat();
-            $timezone = $component->getTimezone();
+        $this->rule(
+            static fn (MuiDatePicker $component): string => "before_or_equal:{$component->getMaxDate()}",
+            static fn (MuiDatePicker $component): bool => filled($component->getMaxDate()),
+        );
+    }
 
-            // Carbon instances (from datetime model casts) need timezone
-            // conversion to extract the correct date in the configured timezone.
-            if ($state instanceof CarbonInterface) {
-                return $state->setTimezone($timezone)->format($format);
-            }
+    /**
+     * @return array<StateCast>
+     */
+    public function getDefaultStateCasts(): array
+    {
+        return [
+            ...parent::getDefaultStateCasts(),
+            app(MuiDateStateCast::class, [
+                'format' => $this->getFormat(),
+                'timezone' => $this->getTimezone(),
+            ]),
+        ];
+    }
 
-            // Datetime strings (e.g., Livewire serializes Carbon date casts
-            // to UTC ISO strings like '1985-11-16T16:00:00.000000Z') contain
-            // time info and need timezone conversion to recover the correct
-            // local date.
-            if (preg_match('/\d{2}:\d{2}/', $state)) {
-                return Carbon::parse($state)->setTimezone($timezone)->format($format);
-            }
+    /**
+     * Resolve a configured date (Carbon, DateTimeInterface, a string in the storage format,
+     * an ISO date or a relative string such as `tomorrow`) to an ISO `Y-m-d` date in the
+     * field's timezone.
+     */
+    public function resolveDate(mixed $date): ?string
+    {
+        if (blank($date)) {
+            return null;
+        }
 
-            // Simple date strings (YYYY-MM-DD from the client or database)
-            // have no time component — no timezone conversion needed as it
-            // would incorrectly shift the date.
-            return Carbon::parse($state)->format($format);
-        });
+        if ($date instanceof DateTimeInterface) {
+            return $date->format('Y-m-d');
+        }
 
-        $this->dehydrateStateUsing(static function (MuiDatePicker $component, $state): ?string {
-            if (blank($state)) {
-                return null;
-            }
+        $date = (string) $date;
 
-            $format = $component->getFormat();
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/D', $date)) {
+            return Carbon::parse($date)->toDateString();
+        }
 
-            if ($state instanceof CarbonInterface) {
-                return $state->format($format);
-            }
-
-            // Datetime strings (from Livewire serialization) need timezone
-            // conversion to extract the correct local date.
-            if (preg_match('/\d{2}:\d{2}/', $state)) {
-                return Carbon::parse($state)
-                    ->setTimezone($component->getTimezone())
-                    ->format($format);
-            }
-
-            // Simple date strings (YYYY-MM-DD from the client) —
-            // no timezone conversion needed.
-            return Carbon::parse($state)->format($format);
-        });
+        try {
+            return Carbon::createFromFormat('!' . $this->getFormat(), $date, $this->getTimezone())->toDateString();
+        } catch (InvalidFormatException) {
+            return Carbon::parse($date, $this->getTimezone())->toDateString();
+        }
     }
 
     public function displayFormat(string | Closure | null $format): static
@@ -155,44 +159,24 @@ class MuiDatePicker extends Field implements HasAffixActions
     {
         $this->maxDate = $date;
 
-        $this->rule(static function (MuiDatePicker $component) {
-            return "before_or_equal:{$component->getMaxDate()}";
-        }, static fn (MuiDatePicker $component): bool => (bool) $component->getMaxDate());
-
         return $this;
     }
 
     public function getMaxDate(): ?string
     {
-        $date = $this->evaluate($this->maxDate);
-
-        if ($date instanceof CarbonInterface) {
-            return $date->format($this->getFormat());
-        }
-
-        return $date;
+        return $this->resolveDate($this->evaluate($this->maxDate));
     }
 
     public function minDate(CarbonInterface | string | Closure | null $date): static
     {
         $this->minDate = $date;
 
-        $this->rule(static function (MuiDatePicker $component) {
-            return "after_or_equal:{$component->getMinDate()}";
-        }, static fn (MuiDatePicker $component): bool => (bool) $component->getMinDate());
-
         return $this;
     }
 
     public function getMinDate(): ?string
     {
-        $date = $this->evaluate($this->minDate);
-
-        if ($date instanceof CarbonInterface) {
-            return $date->format($this->getFormat());
-        }
-
-        return $date;
+        return $this->resolveDate($this->evaluate($this->minDate));
     }
 
     public function defaultFocusedDate(CarbonInterface | string | Closure | null $date): static
@@ -204,13 +188,7 @@ class MuiDatePicker extends Field implements HasAffixActions
 
     public function getDefaultFocusedDate(): ?string
     {
-        $date = $this->evaluate($this->defaultFocusedDate);
-
-        if ($date instanceof CarbonInterface) {
-            return $date->format('Y-m-d');
-        }
-
-        return $date;
+        return $this->resolveDate($this->evaluate($this->defaultFocusedDate));
     }
 
     public function timezone(string | Closure | null $timezone): static
@@ -244,17 +222,15 @@ class MuiDatePicker extends Field implements HasAffixActions
         return $this;
     }
 
+    /**
+     * @return array<string>
+     */
     public function getDisabledDates(): array
     {
-        $dates = $this->evaluate($this->disabledDates);
-
-        return array_map(function ($date) {
-            if ($date instanceof CarbonInterface) {
-                return $date->format('Y-m-d');
-            }
-
-            return $date;
-        }, $dates);
+        return array_values(array_filter(array_map(
+            fn (mixed $date): ?string => $this->resolveDate($date),
+            $this->evaluate($this->disabledDates) ?? [],
+        )));
     }
 
     public function firstDayOfWeek(int | Closure | null $day): static
