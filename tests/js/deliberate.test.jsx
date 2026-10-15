@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, within, cleanup } from '@testing-library/react'
+import { act, render, screen, within, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MuiDatePickerApp from '../../resources/js/react/MuiDatePickerApp'
@@ -148,5 +148,33 @@ describe('deliberate selections', () => {
         await user.keyboard('{Control>}a{/Control}{Backspace}0703')
 
         expect(onChange).toHaveBeenLastCalledWith(null)
+    })
+})
+
+describe('typing while the calendar is open', () => {
+    it('keeps a date typed into the field after opening the picker', async () => {
+        const { onChange, user } = renderPicker({
+            openTo: 'day',
+            value: '1990-03-07',
+        })
+        await user.click(screen.getByRole('button', { name: /choose date/i }))
+
+        // Shift+Tab from the open calendar back to the field: focus moves, the calendar stays open.
+        act(() => screen.getByRole('textbox').focus())
+        expect(screen.getByRole('dialog')).toBeTruthy()
+        await user.keyboard('20061985')
+        await user.keyboard('{Escape}')
+
+        expect(onChange).toHaveBeenLastCalledWith('1985-06-20')
+    })
+
+    it('still ignores a year tapped in the calendar after typing', async () => {
+        const { onChange, user } = renderPicker({ value: '1990-03-07' })
+        await user.click(screen.getByRole('button', { name: /choose date/i }))
+
+        await user.click(within(dialog()).getByRole('radio', { name: '1985' }))
+        await user.keyboard('{Escape}')
+
+        expect(onChange).not.toHaveBeenCalled()
     })
 })
