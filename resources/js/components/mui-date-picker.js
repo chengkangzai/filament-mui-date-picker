@@ -1,11 +1,13 @@
 export default function muiDatePickerFormComponent({
     state,
     statePath,
+    live = false,
     config = {},
 }) {
     return {
         state,
         statePath,
+        live,
         config,
         reactInstance: null,
         _darkModeObserver: null,
@@ -51,18 +53,21 @@ export default function muiDatePickerFormComponent({
                 container,
                 this.buildConfig(this.state),
                 {
-                    onChange: (value) => {
-                        this.state = value
-
-                        // Explicitly sync to Livewire to ensure the value
-                        // reaches the server on form submit, even if the
-                        // deferred $entangle sync is unreliable with wire:ignore.
-                        this.$wire.set(this.statePath, value)
-                    },
+                    onChange: (value) => this.commit(value),
                     onOpen: () => {},
                     onClose: () => {},
                 },
             )
+        },
+
+        // One write per picked date, straight to $wire (47c0c86: the deferred $entangle sync
+        // was unreliable under wire:ignore on submit, so the value must not depend on it).
+        // A live field sends the request now; a deferred one only updates $wire's data, which
+        // Livewire sends with the next request (such as the form submit). The entangled
+        // `state` follows from $wire, so it is not assigned here: doing so on a live field
+        // would send a second request.
+        commit(value) {
+            this.$wire.$set(this.statePath, value, this.live)
         },
 
         readConfig() {

@@ -5,6 +5,9 @@
     $statePath = $getStatePath();
     $reactConfig = $getReactConfig();
     $livewireKey = $getLivewireKey();
+    // Same test the $entangle binding below uses: live(), live(onBlur: true) and
+    // live(debounce: ...) all entangle live, and a picked date is a finished value.
+    $isLive = in_array('live', $getStateBindingModifiers(withBlur: false, withDebounce: false));
 @endphp
 
 <x-dynamic-component
@@ -26,6 +29,7 @@
         x-data="muiDatePickerFormComponent({
             state: $wire.{{ $applyStateBindingModifiers("\$entangle('{$statePath}')") }},
             statePath: @js($statePath),
+            live: @js($isLive),
         })"
         wire:ignore.self
         wire:key="{{ $livewireKey }}"
