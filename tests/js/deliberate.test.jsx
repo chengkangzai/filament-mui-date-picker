@@ -128,12 +128,25 @@ describe('deliberate selections', () => {
         expect(onChange).toHaveBeenLastCalledWith('1990-03-07')
     })
 
-    it('does not commit a typed date that the picker rejects', async () => {
-        const { onChange, user } = renderPicker({ maxDate: '2008-10-15' })
+    it('commits a complete typed date even when it is out of range, so the server can reject it with a message', async () => {
+        const { onChange, user } = renderPicker({
+            maxDate: '2008-10-15',
+            value: '1990-03-07',
+        })
 
         await user.click(screen.getByRole('textbox'))
         await user.keyboard('07032015')
 
-        expect(onChange).not.toHaveBeenCalledWith('2015-03-07')
+        expect(onChange).toHaveBeenLastCalledWith('2015-03-07')
+        expect(onChange.mock.calls.flat()).not.toContain('0201-03-07')
+    })
+
+    it('never leaves the previous date saved while the typed date is unfinished', async () => {
+        const { onChange, user } = renderPicker({ value: '1990-03-07' })
+
+        await user.click(screen.getByRole('textbox'))
+        await user.keyboard('{Control>}a{/Control}{Backspace}0703')
+
+        expect(onChange).toHaveBeenLastCalledWith(null)
     })
 })
