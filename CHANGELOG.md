@@ -2,6 +2,43 @@
 
 All notable changes to `:package_name` will be documented in this file.
 
+## v3.1.0 - 2026-10-15
+
+### What changed
+
+Reliability, validation and accessibility fixes from a code review, each covered by new tests (Pest 37, Vitest 40). They were checked in a browser on a Filament 5 / Livewire 4 app.
+
+- **Custom storage formats work.** With `->format('d/m/Y')`, 1 Feb used to load as 2 Jan, or fail to save. The Livewire state is now always `Y-m-d`, and `format()` is applied on load and save.
+- **Date limits are resolved on the server.**
+  - `minDate`, `maxDate`, `disabledDates` and `defaultFocusedDate` are turned into ISO dates in the field's timezone, for both the picker and the validation rules.
+  - They accept Carbon, closures, or relative strings such as `'tomorrow'`, which the browser previously ignored.
+  
+- **Dependent settings stay current.** For example, `minDate(fn (Get $get) => $get('check_in'))`, `disabled()`, `readOnly()` and the error state now update after every Livewire re-render, without remounting the picker.
+- **Server-side validation.** There is a `not_in` rule for `disabledDates`. `disablePast()` and `disableFuture()` become min/max dates using "today" in the field's timezone, and the picker and the rules share them.
+- **Typed dates.** A complete typed date is always sent to the server, so an out-of-range one shows a validation error instead of silently keeping the old value. An unfinished typed date sends `null`.
+- **Theme colour.** Filament 5's `oklch()` primary colour is read correctly. A colour the theme can't use falls back safely instead of stopping the picker mounting.
+- **Accessibility.**
+  - The label targets the visible input.
+  - The input gets `required`, error state, `aria-invalid`, and `aria-describedby` pointing at the field's error or helper text.
+  
+- **One request per pick.** It uses `$wire.$set(path, value, live)`: deferred fields send nothing until the next request, and `live()` fields send one.
+- **Loader.** If the bundle can't load, it stops retrying after about 10 seconds and shows a plain date input.
+- **CI.** The lockfile is committed, the JS tests run with `npm ci`, and CI fails if the committed `resources/dist` doesn't match the source.
+
+### Behaviour changes to check when upgrading
+
+- The Livewire state is always `Y-m-d`. `getState()` and `$get()` still return the `format()` value.
+- `getMinDate()`, `getMaxDate()`, `getDisabledDates()` and `getDefaultFocusedDate()` now return ISO `Y-m-d` strings.
+- The new server-side rules (`disabledDates`, `disablePast`, `disableFuture`) can reject values that used to be accepted.
+- Deferred fields no longer send a request on every pick.
+
+```bash
+composer update chengkangzai/filament-mui-date-picker
+php artisan filament:assets
+
+```
+**Full Changelog**: https://github.com/chengkangzai/filament-mui-date-picker/compare/v3.0.4...v3.1.0
+
 ## v3.0.4 - 2026-10-15
 
 ### What changed
@@ -25,6 +62,7 @@ A date now counts as finished only after:
 ```bash
 composer update chengkangzai/filament-mui-date-picker
 php artisan filament:assets
+
 
 ```
 There are no API or config changes.
@@ -56,6 +94,7 @@ Re-publish the assets after updating:
 ```bash
 composer update chengkangzai/filament-mui-date-picker
 php artisan filament:assets
+
 
 
 ```
@@ -121,6 +160,7 @@ This release consolidates the previously separate `4.x` and `5.x` branches into 
 
 ```bash
 composer require chengkangzai/filament-mui-date-picker "^3.0"
+
 
 
 
