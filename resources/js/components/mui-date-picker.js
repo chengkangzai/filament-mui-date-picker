@@ -1,3 +1,5 @@
+import { resolvePrimaryColor } from './primary-color'
+
 export default function muiDatePickerFormComponent({
     state,
     statePath,
@@ -121,17 +123,7 @@ export default function muiDatePickerFormComponent({
         },
 
         getPrimaryColor() {
-            const style = getComputedStyle(document.documentElement)
-            const rgb = style.getPropertyValue('--primary-500').trim()
-
-            if (rgb) {
-                const parts = rgb.split(' ')
-                if (parts.length === 3) {
-                    return `rgb(${parts.join(', ')})`
-                }
-            }
-
-            return '#6366f1'
+            return resolvePrimaryColor()
         },
 
         observeDarkMode() {
