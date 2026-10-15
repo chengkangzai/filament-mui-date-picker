@@ -2,6 +2,41 @@
 
 All notable changes to `:package_name` will be documented in this file.
 
+## v3.0.3 - 2026-10-15
+
+### What changed
+
+The picker no longer saves a date until the user has **finished** picking one.
+
+MUI's DatePicker reports a full date as soon as a year or month is tapped, filling in **today's day and month**. The wrapper sent every one of those changes to Livewire. On a birthday field (`->openTo('year')`), a user who tapped their birth year and closed the picker saved today's day and month as their birthday.
+
+Measured on an application using this package: about 4,300 dates of birth matched the user's sign-up day and month, against about 560 expected by chance.
+
+The picker now keeps an in-progress draft and commits only:
+
+- a day picked in the last configured view (or the last entry of `views()`, e.g. the month for `['year', 'month']`)
+- **Clear**, **Today**, or **OK** (mobile)
+- a complete, valid date typed into the field
+
+If the picker is dismissed half-way, the field goes back to the last saved value.
+
+### Upgrading
+
+Re-publish the assets after updating:
+
+```bash
+composer update chengkangzai/filament-mui-date-picker
+php artisan filament:assets
+
+```
+There are no API or config changes. A partial pick no longer reaches Livewire, so `live()` fields stop firing an update for each year or month tap.
+
+### Internals
+
+- New Vitest + Testing Library suite (`npm test`) that drives the real MUI picker, plus a `Run JS Tests` workflow.
+
+**Full Changelog**: https://github.com/chengkangzai/filament-mui-date-picker/compare/v3.0.2...v3.0.3
+
 ## v3.0.2 - 2026-09-15
 
 ### What changed
@@ -56,6 +91,7 @@ This release consolidates the previously separate `4.x` and `5.x` branches into 
 
 ```bash
 composer require chengkangzai/filament-mui-date-picker "^3.0"
+
 
 
 
