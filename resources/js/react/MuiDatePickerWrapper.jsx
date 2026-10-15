@@ -23,6 +23,9 @@ export default function MuiDatePickerWrapper({
     const committed = useRef(config.value ?? null)
     const isOpen = useRef(config.variant === 'static')
     const deliberate = useRef(false)
+    // Set by keystrokes in the text field: a date typed while the calendar is open is still
+    // the reader's own entry, unlike a year or month tapped in the calendar.
+    const typing = useRef(false)
 
     useEffect(() => {
         committed.current = config.value ?? null
@@ -46,6 +49,7 @@ export default function MuiDatePickerWrapper({
         (view) => () => {
             if (view === finalView) {
                 deliberate.current = true
+                typing.current = false
             }
         },
         [finalView],
@@ -63,7 +67,7 @@ export default function MuiDatePickerWrapper({
             // Typing in the field. A complete date is committed even when it breaks a limit, so
             // the server rejects it with a message instead of silently keeping the old date; an
             // unfinished one commits nothing (null), never the previously saved value.
-            if (!isOpen.current) {
+            if (!isOpen.current || typing.current) {
                 commit(isCompleteDate(newValue) ? newValue : null)
             }
         },
@@ -72,7 +76,9 @@ export default function MuiDatePickerWrapper({
 
     const handleAccept = useCallback(
         (newValue) => {
-            if (newValue === null || deliberate.current) {
+            // Clear, Today and OK are action-bar clicks, so they count as deliberate. A dismiss
+            // (Escape, click away) can report a momentarily empty value; that is never a choice.
+            if (deliberate.current) {
                 commit(newValue)
                 return
             }
@@ -84,6 +90,7 @@ export default function MuiDatePickerWrapper({
 
     const handleOpen = useCallback(() => {
         isOpen.current = true
+        typing.current = false
         deliberate.current = false
         onOpen?.()
     }, [onOpen])
@@ -158,6 +165,9 @@ export default function MuiDatePickerWrapper({
                 required: config.required || false,
                 // Only force the error on; otherwise leave MUI's own validation state alone.
                 ...(config.error ? { error: true } : {}),
+                onKeyDown: () => {
+                    typing.current = true
+                },
                 inputProps: {
                     'aria-describedby': config.describedBy || undefined,
                     'aria-label': config.ariaLabel || undefined,
