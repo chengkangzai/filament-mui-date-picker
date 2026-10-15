@@ -82,6 +82,8 @@ MuiDatePicker::make('date')
 
 The field stores dates in `Y-m-d` format by default and displays them as `MM/DD/YYYY`.
 
+Validation runs on the server: `required`, `date`, `minDate()` / `maxDate()`, `disabledDates()`, `disablePast()` and `disableFuture()` are all enforced as Laravel rules, so a value posted directly to Livewire cannot bypass them.
+
 ## Configuration Options
 
 ### Display Format and Storage Format
@@ -99,12 +101,19 @@ MuiDatePicker::make('date')
 | `displayFormat()` | `MM/DD/YYYY` | Day.js |
 | `format()` | `Y-m-d` | PHP |
 
+The storage format is applied when the form is loaded and saved, like Filament's native `DatePicker`: a stored value is parsed with `format()` when the form is filled, and the selected date is formatted with `format()` when you call `$form->getState()`. While the form is open, the Livewire state (`$this->data['date']`, `$wire.data.date`) is always an ISO `Y-m-d` date, whatever `format()` is. `$get('date')` in a closure returns the value in `format()`, as with the native picker.
+
+Model `datetime` casts (Carbon instances) and datetime strings with an offset are converted to the field's `timezone()` before the date is taken. If `format()` contains a time (e.g. `Y-m-d H:i:s`), the saved value is midnight in the field's timezone, converted to the app timezone.
+
 ### Min and Max Dates
 
 Constrain the selectable date range. These methods automatically add `before_or_equal` and `after_or_equal` Laravel validation rules.
 
+Limits accept an ISO date, a date in your `format()`, a Carbon / `DateTimeInterface` instance, a closure, or a relative string such as `today` or `tomorrow` (resolved on the server in the field's `timezone()`). They are resolved to a `Y-m-d` date once, on the server, and the same date is used for the picker and for validation.
+
 ```php
 use Carbon\Carbon;
+use Filament\Schemas\Components\Utilities\Get;
 
 MuiDatePicker::make('date')
     ->minDate('2024-01-01')
@@ -114,11 +123,23 @@ MuiDatePicker::make('date')
 MuiDatePicker::make('date')
     ->minDate(now()->startOfMonth())
     ->maxDate(now()->endOfMonth())
+
+// Relative strings:
+MuiDatePicker::make('date')
+    ->minDate('tomorrow')
+
+// Depending on another field. The picker is updated on every Livewire render, so make the
+// field it depends on live():
+MuiDatePicker::make('start_date')->live()
+MuiDatePicker::make('end_date')
+    ->minDate(fn (Get $get) => $get('start_date'))
 ```
+
+Closures for `minDate()`, `maxDate()`, `disabledDates()`, `disabled()`, `readOnly()` and the rest of the picker's options are re-evaluated on every Livewire render, and the new configuration is passed to the open picker without remounting it.
 
 ### Disabled Dates
 
-Pass an array of specific dates that cannot be selected:
+Pass an array (or a closure returning one) of specific dates that cannot be selected. They are also rejected by a server-side `not_in` rule, with the message "The selected date is not available." (`mui-date-picker::validation.disabled_date`, or override it with `validationMessages(['not_in' => '...'])`).
 
 ```php
 MuiDatePicker::make('date')
@@ -131,7 +152,7 @@ MuiDatePicker::make('date')
 
 ### Disable Future / Disable Past
 
-Quickly prevent selection of future or past dates:
+Quickly prevent selection of future or past dates. "Today" is computed on the server in the field's `timezone()` and passed to the picker as its min/max date, so the browser's clock and timezone cannot disagree with validation; the matching `after_or_equal` / `before_or_equal` rule is enforced on the server. Combined with `minDate()` / `maxDate()`, the stricter limit wins.
 
 ```php
 MuiDatePicker::make('date')
@@ -498,20 +519,34 @@ MuiDatePicker::make('date')
     ->clearable()
 ```
 
+### Live Fields
+
+A picked date is written to Livewire once. On a `live()` field (including `live(onBlur: true)` and `live(debounce: ...)`) it is sent to the server immediately; on a regular (deferred) field it is sent with the next request, such as the form submit.
+
+## Accessibility
+
+The visible picker input takes the field's id, so the Filament label names and focuses it. It also gets the field's `required` state, `aria-invalid` when the field has a validation error, and `aria-describedby` pointing at the helper text and error message (Filament 5.10+). A field with `hiddenLabel()` gets an `aria-label` instead.
+
 ## Styling
 
-The date picker automatically adapts to Filament's dark mode and uses your panel's primary color. No additional CSS configuration is needed.
+The date picker automatically adapts to Filament's dark mode and uses your panel's primary color (Filament 4/5 `oklch()` colors are converted for MUI; an unreadable color falls back to indigo). No additional CSS configuration is needed.
+
+If the picker's JavaScript bundle cannot be loaded within about ten seconds, the field logs a console error and shows a plain browser date input instead.
 
 The component uses the following CSS classes if you need to target it for custom styling:
 
 - `.fi-fo-mui-date-picker` -- the outer wrapper
 - `.fi-fo-mui-date-picker-container` -- the React mount point
+- `.fi-fo-mui-date-picker-fallback-message` / `.fi-fo-mui-date-picker-fallback-input` -- the fallback shown if the bundle fails to load
 
 ## Testing
 
 ```bash
-composer test
+composer test   # Pest
+npm test        # Vitest (React picker and Alpine bridge)
 ```
+
+`resources/dist` is committed. After changing anything in `resources/js` or `resources/css`, run `npm run build` and commit the result; CI fails if the committed build is out of date.
 
 ## Changelog
 

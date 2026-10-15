@@ -4,15 +4,23 @@ on:
   push:
     paths:
       - 'resources/js/**'
+      - 'resources/css/**'
+      - 'resources/dist/**'
       - 'tests/js/**'
+      - 'bin/build.js'
       - 'package.json'
+      - 'package-lock.json'
       - 'vitest.config.js'
       - '.github/workflows/run-js-tests.yml'
   pull_request:
     paths:
       - 'resources/js/**'
+      - 'resources/css/**'
+      - 'resources/dist/**'
       - 'tests/js/**'
+      - 'bin/build.js'
       - 'package.json'
+      - 'package-lock.json'
       - 'vitest.config.js'
       - '.github/workflows/run-js-tests.yml'
 
@@ -25,5 +33,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
       - run: npm test
+
+      - name: Check the committed build is up to date
+        run: |
+          npm run build
+          if ! git diff --exit-code --stat resources/dist; then
+            echo "::error::resources/dist is out of date. Run 'npm run build' and commit the result."
+            exit 1
+          fi

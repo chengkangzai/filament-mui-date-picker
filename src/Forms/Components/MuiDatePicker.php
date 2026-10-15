@@ -2,16 +2,22 @@
 
 namespace Cck\FilamentMuiDatePicker\Forms\Components;
 
-use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Carbon\Exceptions\InvalidFormatException;
+use Cck\FilamentMuiDatePicker\Forms\Components\StateCasts\MuiDateStateCast;
 use Closure;
+use DateTimeInterface;
 use Filament\Forms\Components\Concerns\CanBeReadOnly;
 use Filament\Forms\Components\Concerns\HasAffixes;
 use Filament\Forms\Components\Concerns\HasExtraInputAttributes;
 use Filament\Forms\Components\Concerns\HasPlaceholder;
 use Filament\Forms\Components\Field;
 use Filament\Schemas\Components\Contracts\HasAffixActions;
+use Filament\Schemas\Components\StateCasts\Contracts\StateCast;
 use Filament\Support\Concerns\HasExtraAlpineAttributes;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\NotIn;
 
 class MuiDatePicker extends Field implements HasAffixActions
 {
@@ -74,57 +80,104 @@ class MuiDatePicker extends Field implements HasAffixActions
 
         $this->rule('date');
 
-        $this->formatStateUsing(static function (MuiDatePicker $component, $state): ?string {
-            if (blank($state)) {
-                return null;
-            }
+        $this->rule(
+            static fn (MuiDatePicker $component): string => "after_or_equal:{$component->getEarliestSelectableDate()}",
+            static fn (MuiDatePicker $component): bool => filled($component->getEarliestSelectableDate()),
+        );
 
-            $format = $component->getFormat();
-            $timezone = $component->getTimezone();
+        $this->rule(
+            static fn (MuiDatePicker $component): string => "before_or_equal:{$component->getLatestSelectableDate()}",
+            static fn (MuiDatePicker $component): bool => filled($component->getLatestSelectableDate()),
+        );
 
-            // Carbon instances (from datetime model casts) need timezone
-            // conversion to extract the correct date in the configured timezone.
-            if ($state instanceof CarbonInterface) {
-                return $state->setTimezone($timezone)->format($format);
-            }
+        $this->rule(
+            static fn (MuiDatePicker $component): NotIn => Rule::notIn($component->getDisabledDates()),
+            static fn (MuiDatePicker $component): bool => filled($component->getDisabledDates()),
+        );
+    }
 
-            // Datetime strings (e.g., Livewire serializes Carbon date casts
-            // to UTC ISO strings like '1985-11-16T16:00:00.000000Z') contain
-            // time info and need timezone conversion to recover the correct
-            // local date.
-            if (preg_match('/\d{2}:\d{2}/', $state)) {
-                return Carbon::parse($state)->setTimezone($timezone)->format($format);
-            }
+    /**
+     * @return array<string, string>
+     */
+    public function getValidationMessages(): array
+    {
+        return [
+            'not_in' => __('mui-date-picker::validation.disabled_date'),
+            ...parent::getValidationMessages(),
+        ];
+    }
 
-            // Simple date strings (YYYY-MM-DD from the client or database)
-            // have no time component — no timezone conversion needed as it
-            // would incorrectly shift the date.
-            return Carbon::parse($state)->format($format);
-        });
+    public function getToday(): string
+    {
+        return Carbon::now($this->getTimezone())->toDateString();
+    }
 
-        $this->dehydrateStateUsing(static function (MuiDatePicker $component, $state): ?string {
-            if (blank($state)) {
-                return null;
-            }
+    /**
+     * minDate, raised to today (in the field's timezone) when disablePast() is set.
+     */
+    public function getEarliestSelectableDate(): ?string
+    {
+        $dates = array_filter([
+            $this->getMinDate(),
+            $this->getDisablePast() ? $this->getToday() : null,
+        ]);
 
-            $format = $component->getFormat();
+        return $dates ? max($dates) : null;
+    }
 
-            if ($state instanceof CarbonInterface) {
-                return $state->format($format);
-            }
+    /**
+     * maxDate, lowered to today (in the field's timezone) when disableFuture() is set.
+     */
+    public function getLatestSelectableDate(): ?string
+    {
+        $dates = array_filter([
+            $this->getMaxDate(),
+            $this->getDisableFuture() ? $this->getToday() : null,
+        ]);
 
-            // Datetime strings (from Livewire serialization) need timezone
-            // conversion to extract the correct local date.
-            if (preg_match('/\d{2}:\d{2}/', $state)) {
-                return Carbon::parse($state)
-                    ->setTimezone($component->getTimezone())
-                    ->format($format);
-            }
+        return $dates ? min($dates) : null;
+    }
 
-            // Simple date strings (YYYY-MM-DD from the client) —
-            // no timezone conversion needed.
-            return Carbon::parse($state)->format($format);
-        });
+    /**
+     * @return array<StateCast>
+     */
+    public function getDefaultStateCasts(): array
+    {
+        return [
+            ...parent::getDefaultStateCasts(),
+            app(MuiDateStateCast::class, [
+                'format' => $this->getFormat(),
+                'timezone' => $this->getTimezone(),
+            ]),
+        ];
+    }
+
+    /**
+     * Resolve a configured date (Carbon, DateTimeInterface, a string in the storage format,
+     * an ISO date or a relative string such as `tomorrow`) to an ISO `Y-m-d` date in the
+     * field's timezone.
+     */
+    public function resolveDate(mixed $date): ?string
+    {
+        if (blank($date)) {
+            return null;
+        }
+
+        if ($date instanceof DateTimeInterface) {
+            return $date->format('Y-m-d');
+        }
+
+        $date = (string) $date;
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/D', $date)) {
+            return Carbon::parse($date)->toDateString();
+        }
+
+        try {
+            return Carbon::createFromFormat('!' . $this->getFormat(), $date, $this->getTimezone())->toDateString();
+        } catch (InvalidFormatException) {
+            return Carbon::parse($date, $this->getTimezone())->toDateString();
+        }
     }
 
     public function displayFormat(string | Closure | null $format): static
@@ -155,44 +208,24 @@ class MuiDatePicker extends Field implements HasAffixActions
     {
         $this->maxDate = $date;
 
-        $this->rule(static function (MuiDatePicker $component) {
-            return "before_or_equal:{$component->getMaxDate()}";
-        }, static fn (MuiDatePicker $component): bool => (bool) $component->getMaxDate());
-
         return $this;
     }
 
     public function getMaxDate(): ?string
     {
-        $date = $this->evaluate($this->maxDate);
-
-        if ($date instanceof CarbonInterface) {
-            return $date->format($this->getFormat());
-        }
-
-        return $date;
+        return $this->resolveDate($this->evaluate($this->maxDate));
     }
 
     public function minDate(CarbonInterface | string | Closure | null $date): static
     {
         $this->minDate = $date;
 
-        $this->rule(static function (MuiDatePicker $component) {
-            return "after_or_equal:{$component->getMinDate()}";
-        }, static fn (MuiDatePicker $component): bool => (bool) $component->getMinDate());
-
         return $this;
     }
 
     public function getMinDate(): ?string
     {
-        $date = $this->evaluate($this->minDate);
-
-        if ($date instanceof CarbonInterface) {
-            return $date->format($this->getFormat());
-        }
-
-        return $date;
+        return $this->resolveDate($this->evaluate($this->minDate));
     }
 
     public function defaultFocusedDate(CarbonInterface | string | Closure | null $date): static
@@ -204,13 +237,7 @@ class MuiDatePicker extends Field implements HasAffixActions
 
     public function getDefaultFocusedDate(): ?string
     {
-        $date = $this->evaluate($this->defaultFocusedDate);
-
-        if ($date instanceof CarbonInterface) {
-            return $date->format('Y-m-d');
-        }
-
-        return $date;
+        return $this->resolveDate($this->evaluate($this->defaultFocusedDate));
     }
 
     public function timezone(string | Closure | null $timezone): static
@@ -244,17 +271,15 @@ class MuiDatePicker extends Field implements HasAffixActions
         return $this;
     }
 
+    /**
+     * @return array<string>
+     */
     public function getDisabledDates(): array
     {
-        $dates = $this->evaluate($this->disabledDates);
-
-        return array_map(function ($date) {
-            if ($date instanceof CarbonInterface) {
-                return $date->format('Y-m-d');
-            }
-
-            return $date;
-        }, $dates);
+        return array_values(array_filter(array_map(
+            fn (mixed $date): ?string => $this->resolveDate($date),
+            $this->evaluate($this->disabledDates) ?? [],
+        )));
     }
 
     public function firstDayOfWeek(int | Closure | null $day): static
@@ -474,11 +499,11 @@ class MuiDatePicker extends Field implements HasAffixActions
             'views' => $this->getPickerViews(),
             'openTo' => $this->getOpenTo(),
             'format' => $this->getDisplayFormat(),
-            'minDate' => $this->getMinDate(),
-            'maxDate' => $this->getMaxDate(),
+            // disablePast/disableFuture are folded into these with the server's "today" in
+            // the field timezone, so the browser clock cannot disagree with validation.
+            'minDate' => $this->getEarliestSelectableDate(),
+            'maxDate' => $this->getLatestSelectableDate(),
             'disabledDates' => $this->getDisabledDates(),
-            'disableFuture' => $this->getDisableFuture(),
-            'disablePast' => $this->getDisablePast(),
             'showToolbar' => $this->getShowToolbar(),
             'clearable' => $this->isClearable(),
             'showTodayButton' => $this->getShowTodayButton(),
@@ -492,6 +517,7 @@ class MuiDatePicker extends Field implements HasAffixActions
             'placeholder' => $this->getPlaceholder(),
             'readOnly' => $this->isReadOnly(),
             'disabled' => $this->isDisabled(),
+            ...$this->getAccessibilityConfig(),
         ], fn ($value) => ! is_null($value));
 
         $localeText = $this->resolveLocaleText();
@@ -501,6 +527,36 @@ class MuiDatePicker extends Field implements HasAffixActions
         }
 
         return $config;
+    }
+
+    /**
+     * The visible MUI input replaces Filament's input, so it takes the field id (the label's
+     * `for` target), the required and error state, and the helper/error description ids.
+     *
+     * @return array<string, mixed>
+     */
+    protected function getAccessibilityConfig(): array
+    {
+        $hasError = $this->callIfAvailable('hasValidationError', fn (): bool => (bool) view()->shared('errors')?->has($this->getStatePath()));
+        $describedBy = implode(' ', $this->callIfAvailable('getDescriptionIds', fn (): array => []));
+
+        return [
+            'id' => $this->getId(),
+            'name' => $this->getStatePath(),
+            'required' => $this->isRequired() && (! $this->isDisabled()) && (! $this->isReadOnly()),
+            'error' => $hasError,
+            'describedBy' => filled($describedBy) ? $describedBy : null,
+            'ariaLabel' => $this->isLabelHidden() ? strip_tags((string) $this->getLabel()) : null,
+        ];
+    }
+
+    /**
+     * getDescriptionIds() and hasValidationError() only exist from Filament 5.10, and this
+     * plugin still supports Filament 4 and earlier 5.x releases.
+     */
+    protected function callIfAvailable(string $method, Closure $fallback): mixed
+    {
+        return method_exists($this, $method) ? $this->{$method}() : $fallback();
     }
 
     /**

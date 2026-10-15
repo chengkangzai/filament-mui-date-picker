@@ -1,13 +1,31 @@
 import { createTheme } from '@mui/material/styles'
 
+export const DEFAULT_PRIMARY_COLOR = '#6366f1'
+
+// A colour MUI cannot parse makes createTheme throw, which would stop the picker mounting.
 export function buildTheme(colorScheme, primaryColor) {
+    try {
+        return createPickerTheme(
+            colorScheme,
+            primaryColor || DEFAULT_PRIMARY_COLOR,
+        )
+    } catch (error) {
+        console.warn(
+            `[mui-date-picker] Falling back to the default primary colour: ${error.message}`,
+        )
+
+        return createPickerTheme(colorScheme, DEFAULT_PRIMARY_COLOR)
+    }
+}
+
+function createPickerTheme(colorScheme, primaryColor) {
     const isDark = colorScheme === 'dark'
 
     return createTheme({
         palette: {
             mode: isDark ? 'dark' : 'light',
             primary: {
-                main: primaryColor || '#6366f1',
+                main: primaryColor,
             },
             background: isDark
                 ? { default: '#1f2937', paper: '#111827' }

@@ -52,7 +52,7 @@ export default function MuiDatePickerWrapper({
     )
 
     const handleChange = useCallback(
-        (newValue, context) => {
+        (newValue) => {
             setDraft(newValue)
 
             if (config.variant === 'static') {
@@ -60,13 +60,11 @@ export default function MuiDatePickerWrapper({
                 return
             }
 
-            // Typing in the field: commit once the date is complete and the picker accepts it.
-            if (
-                !isOpen.current &&
-                !context?.validationError &&
-                (newValue === null || newValue.isValid())
-            ) {
-                commit(newValue)
+            // Typing in the field. A complete date is committed even when it breaks a limit, so
+            // the server rejects it with a message instead of silently keeping the old date; an
+            // unfinished one commits nothing (null), never the previously saved value.
+            if (!isOpen.current) {
+                commit(isCompleteDate(newValue) ? newValue : null)
             }
         },
         [commit, config.variant],
@@ -154,6 +152,16 @@ export default function MuiDatePickerWrapper({
                 size: 'small',
                 fullWidth: true,
                 variant: 'outlined',
+                // Filament's <label for> targets the field id, so the visible input takes it.
+                id: config.id || undefined,
+                name: config.name || undefined,
+                required: config.required || false,
+                // Only force the error on; otherwise leave MUI's own validation state alone.
+                ...(config.error ? { error: true } : {}),
+                inputProps: {
+                    'aria-describedby': config.describedBy || undefined,
+                    'aria-label': config.ariaLabel || undefined,
+                },
             },
             toolbar: {
                 hidden: !config.showToolbar,
@@ -194,4 +202,10 @@ export default function MuiDatePickerWrapper({
 
 function toDayjs(value) {
     return value ? dayjs(value) : null
+}
+
+// MUI reports the year while it is being typed ("0201" on the way to "2015"); treat
+// those as unfinished rather than real dates.
+function isCompleteDate(value) {
+    return Boolean(value?.isValid()) && value.year() >= 1000
 }
