@@ -1,6 +1,10 @@
 <?php
 
 use Cck\FilamentMuiDatePicker\Forms\Components\MuiDatePicker;
+use Filament\Forms\Components\Field;
+
+// Filament renders ids on the helper text and error message from 5.10.
+$hasDescriptionIds = method_exists(Field::class, 'getDescriptionIds');
 
 it('forwards the field id, name and required state to the picker input', function () {
     $livewire = datePickerForm(fn () => [MuiDatePicker::make('date')->required()]);
@@ -37,17 +41,19 @@ it('points aria-describedby at the helper text', function () {
     foreach ($describedBy as $describedById) {
         expect($document->getElementById($describedById)?->textContent)->toContain('Your birthday');
     }
-});
+})->skip(! $hasDescriptionIds, 'Filament < 5.10 renders no helper text id');
 
-it('marks the picker invalid and describes it by the error once validation fails', function () {
+it('marks the picker invalid and describes it by the error once validation fails', function () use ($hasDescriptionIds) {
     $livewire = datePickerForm(fn () => [MuiDatePicker::make('date')->required()])
         ->call('submit')
         ->assertHasFormErrors(['date' => 'required']);
     $id = datePickerField($livewire)->getId();
 
-    expect(renderedConfig($livewire))
-        ->error->toBeTrue()
-        ->describedBy->toContain("{$id}-error");
+    expect(renderedConfig($livewire))->error->toBeTrue();
+
+    if ($hasDescriptionIds) {
+        expect(renderedConfig($livewire))->describedBy->toContain("{$id}-error");
+    }
 
     $livewire->set('data.date', '2024-02-01')->call('submit')->assertHasNoFormErrors();
 
