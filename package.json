@@ -3,19 +3,26 @@
     "type": "module",
     "scripts": {
         "dev": "node bin/build.js --dev",
-        "build": "node bin/build.js"
+        "build": "node bin/build.js",
+        "test": "vitest run"
     },
     "devDependencies": {
+        "@testing-library/dom": "^10.4.0",
+        "@testing-library/react": "^16.3.0",
+        "@testing-library/user-event": "^14.6.1",
+        "@vitejs/plugin-react": "^4.7.0",
         "esbuild": "^0.25.5",
-        "prettier": "^3.5.3"
+        "jsdom": "^26.1.0",
+        "prettier": "^3.5.3",
+        "vitest": "^3.2.4"
     },
     "dependencies": {
-        "react": "^19.0.0",
-        "react-dom": "^19.0.0",
-        "@mui/x-date-pickers": "^7.0.0",
-        "@mui/material": "^6.0.0",
         "@emotion/react": "^11.0.0",
         "@emotion/styled": "^11.0.0",
-        "dayjs": "^1.11.0"
+        "@mui/material": "^6.0.0",
+        "@mui/x-date-pickers": "^7.0.0",
+        "dayjs": "^1.11.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0"
     }
 }

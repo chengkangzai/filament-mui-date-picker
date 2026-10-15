@@ -1,0 +1,29 @@
+name: Run JS Tests
+
+on:
+  push:
+    paths:
+      - 'resources/js/**'
+      - 'tests/js/**'
+      - 'package.json'
+      - 'vitest.config.js'
+      - '.github/workflows/run-js-tests.yml'
+  pull_request:
+    paths:
+      - 'resources/js/**'
+      - 'tests/js/**'
+      - 'package.json'
+      - 'vitest.config.js'
+      - '.github/workflows/run-js-tests.yml'
+
+jobs:
+  vitest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm test
