@@ -16,6 +16,8 @@ use Filament\Schemas\Components\Contracts\HasAffixActions;
 use Filament\Schemas\Components\StateCasts\Contracts\StateCast;
 use Filament\Support\Concerns\HasExtraAlpineAttributes;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\NotIn;
 
 class MuiDatePicker extends Field implements HasAffixActions
 {
@@ -79,14 +81,61 @@ class MuiDatePicker extends Field implements HasAffixActions
         $this->rule('date');
 
         $this->rule(
-            static fn (MuiDatePicker $component): string => "after_or_equal:{$component->getMinDate()}",
-            static fn (MuiDatePicker $component): bool => filled($component->getMinDate()),
+            static fn (MuiDatePicker $component): string => "after_or_equal:{$component->getEarliestSelectableDate()}",
+            static fn (MuiDatePicker $component): bool => filled($component->getEarliestSelectableDate()),
         );
 
         $this->rule(
-            static fn (MuiDatePicker $component): string => "before_or_equal:{$component->getMaxDate()}",
-            static fn (MuiDatePicker $component): bool => filled($component->getMaxDate()),
+            static fn (MuiDatePicker $component): string => "before_or_equal:{$component->getLatestSelectableDate()}",
+            static fn (MuiDatePicker $component): bool => filled($component->getLatestSelectableDate()),
         );
+
+        $this->rule(
+            static fn (MuiDatePicker $component): NotIn => Rule::notIn($component->getDisabledDates()),
+            static fn (MuiDatePicker $component): bool => filled($component->getDisabledDates()),
+        );
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function getValidationMessages(): array
+    {
+        return [
+            'not_in' => __('mui-date-picker::validation.disabled_date'),
+            ...parent::getValidationMessages(),
+        ];
+    }
+
+    public function getToday(): string
+    {
+        return Carbon::now($this->getTimezone())->toDateString();
+    }
+
+    /**
+     * minDate, raised to today (in the field's timezone) when disablePast() is set.
+     */
+    public function getEarliestSelectableDate(): ?string
+    {
+        $dates = array_filter([
+            $this->getMinDate(),
+            $this->getDisablePast() ? $this->getToday() : null,
+        ]);
+
+        return $dates ? max($dates) : null;
+    }
+
+    /**
+     * maxDate, lowered to today (in the field's timezone) when disableFuture() is set.
+     */
+    public function getLatestSelectableDate(): ?string
+    {
+        $dates = array_filter([
+            $this->getMaxDate(),
+            $this->getDisableFuture() ? $this->getToday() : null,
+        ]);
+
+        return $dates ? min($dates) : null;
     }
 
     /**
@@ -450,11 +499,11 @@ class MuiDatePicker extends Field implements HasAffixActions
             'views' => $this->getPickerViews(),
             'openTo' => $this->getOpenTo(),
             'format' => $this->getDisplayFormat(),
-            'minDate' => $this->getMinDate(),
-            'maxDate' => $this->getMaxDate(),
+            // disablePast/disableFuture are folded into these with the server's "today" in
+            // the field timezone, so the browser clock cannot disagree with validation.
+            'minDate' => $this->getEarliestSelectableDate(),
+            'maxDate' => $this->getLatestSelectableDate(),
             'disabledDates' => $this->getDisabledDates(),
-            'disableFuture' => $this->getDisableFuture(),
-            'disablePast' => $this->getDisablePast(),
             'showToolbar' => $this->getShowToolbar(),
             'clearable' => $this->isClearable(),
             'showTodayButton' => $this->getShowTodayButton(),
