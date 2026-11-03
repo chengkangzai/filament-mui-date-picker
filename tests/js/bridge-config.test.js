@@ -62,3 +62,34 @@ describe('Alpine bridge: config from the server', () => {
         expect(instance.update).not.toHaveBeenCalled()
     })
 })
+
+describe('Alpine bridge: config beside a fully wire:ignored component', () => {
+    it('reads the config from the sibling element when there is no x-ref', () => {
+        const { mount } = stubReact()
+        const { component } = makeBridge({
+            config: { minDate: '2024-01-01' },
+            layout: 'sibling',
+        })
+
+        component.init()
+
+        expect(mount.mock.calls[0][1]).toMatchObject({ minDate: '2024-01-01' })
+    })
+
+    it('follows a re-rendered sibling config without remounting', async () => {
+        const { instance, mount } = stubReact()
+        const bridge = makeBridge({
+            config: { disabled: true },
+            layout: 'sibling',
+        })
+
+        bridge.component.init()
+        bridge.setConfig({ disabled: false, minDate: '2024-03-01' })
+        await flushObservers()
+
+        expect(mount).toHaveBeenCalledTimes(1)
+        expect(instance.update).toHaveBeenLastCalledWith(
+            expect.objectContaining({ disabled: false, minDate: '2024-03-01' }),
+        )
+    })
+})

@@ -14,15 +14,18 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         php: [8.4, 8.3]
-        laravel: [12.*, 11.*]
+        # Laravel 11 is gone: every 11.x release is now covered by a security advisory
+        # (PKSA-b41t-wbzk-9q51 and others, affected <12.68.0) that will not be backported, and
+        # Composer refuses to install advisory-affected versions, so those jobs can never resolve.
+        laravel: [13.*, 12.*]
         stability: [prefer-lowest, prefer-stable]
         include:
-          - laravel: 12.*
-            testbench: 10.*
+          - laravel: 13.*
+            testbench: 11.*
             carbon: 3.*
             collision: 8.*
-          - laravel: 11.*
-            testbench: 9.*
+          - laravel: 12.*
+            testbench: 10.*
             carbon: 3.*
             collision: 8.*
 
@@ -53,4 +56,41 @@ jobs:
         run: composer show -D
 
       - name: Execute tests
-        run: vendor/bin/pest --no-coverage
+        # Browser tests need Node + Chromium; they run once in the browser job below.
+        run: vendor/bin/pest --no-coverage --exclude-group=browser
+
+  browser:
+    runs-on: ubuntu-latest
+    name: Browser tests (P8.4 - L13.*)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, intl, fileinfo
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: |
+          # pest-plugin-browser is installed here only: it refuses to boot Pest at all without
+          # node_modules/.bin/playwright, which the PHP-only matrix jobs do not have.
+          composer require "laravel/framework:13.*" "orchestra/testbench:11.*" --no-interaction --no-update
+          composer require --dev "pestphp/pest-plugin-browser:^4.0" --no-interaction --no-update
+          composer update --prefer-stable --prefer-dist --no-interaction
+          npm ci
+
+      # pest-plugin-browser drives Chromium through the project's own playwright package.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Execute browser tests
+        run: vendor/bin/pest --no-coverage --group=browser

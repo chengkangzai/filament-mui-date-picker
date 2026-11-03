@@ -25,7 +25,7 @@ export default function muiDatePickerFormComponent({
         init() {
             this._primaryColor = this.getPrimaryColor()
 
-            // The React container is wire:ignore'd, so the server renders the config into an
+            // The component is wire:ignore'd, so the server renders the config into an
             // attribute outside it. Livewire morphs that attribute on every render; watching it
             // keeps closures such as minDate(fn (Get $get) => ...), disabled() and the error
             // state current without remounting React (which would drop focus and open state).
@@ -119,8 +119,20 @@ export default function muiDatePickerFormComponent({
             this.$wire.$set(this.statePath, value, this.live)
         },
 
+        // The config sits beside this (fully wire:ignore'd) element, inside a wrapper Livewire
+        // still morphs. Views published before that change kept it as an x-ref="config" child.
+        configElement() {
+            return (
+                this.$refs.config ??
+                this.$el.parentElement?.querySelector(
+                    ':scope > [data-mui-date-picker-config]',
+                ) ??
+                null
+            )
+        },
+
         readConfig() {
-            const json = this.$refs.config?.getAttribute(
+            const json = this.configElement()?.getAttribute(
                 'data-mui-date-picker-config',
             )
 
@@ -134,7 +146,9 @@ export default function muiDatePickerFormComponent({
         },
 
         observeConfig() {
-            if (!this.$refs.config) return
+            const configElement = this.configElement()
+
+            if (!configElement) return
 
             this._configObserver = new MutationObserver(() => {
                 const config = this.readConfig()
@@ -148,7 +162,7 @@ export default function muiDatePickerFormComponent({
                 }
             })
 
-            this._configObserver.observe(this.$refs.config, {
+            this._configObserver.observe(configElement, {
                 attributes: true,
                 attributeFilter: ['data-mui-date-picker-config'],
             })
