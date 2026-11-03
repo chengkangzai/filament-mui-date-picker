@@ -2,21 +2,43 @@
 
 All notable changes to `:package_name` will be documented in this file.
 
+## v3.1.2 - 2026-11-03
+
+### What changed
+
+- **No more `muiDatePickerFormComponent is not defined` / `state is not defined` on slow connections.**
+  - The picker's Alpine component loads lazily. If a Livewire update arrived while it was still downloading (common on mobile networks), the morph cloned the field and Alpine evaluated it before the component existed.
+  - The Alpine element is now fully `wire:ignore`'d, as Filament's own lazy-loaded fields are, and the live config sits beside it, so `minDate(fn (Get $get) => …)`, `disabled()` and similar still update without remounting.
+  - Seen in production on mobile Safari and Chrome; reproduced in a real-browser test (Chromium) that fails on v3.1.1 with exactly those errors and passes on v3.1.2.
+  
+
+If you **published** the field's view, re-publish it to get the fix. The old view keeps working, but keeps the race.
+
+```bash
+composer update chengkangzai/filament-mui-date-picker
+php artisan filament:assets
+
+```
+**Full Changelog**: https://github.com/chengkangzai/filament-mui-date-picker/compare/v3.1.1...v3.1.2
+
 ## v3.1.1 - 2026-10-15
 
 ### What changed
 
 - **A date typed while the calendar is open is kept.**
+  
   - Open the calendar, Shift+Tab back to the field, type a date, press Escape: v3.1.0 emptied the field and saved nothing.
   - Typed dates now commit whether the calendar is open or closed. Calendar clicks still need the last view (no year-only dates).
   
 - **Closing the calendar can no longer wipe the value.** A dismiss (Escape or click away) could report a momentarily empty value. An empty value is now committed only by the **Clear** button.
+  
 
 Found by a code review and reproduced in Chrome; two new tests (one fails on v3.1.0).
 
 ```bash
 composer update chengkangzai/filament-mui-date-picker
 php artisan filament:assets
+
 
 ```
 **Full Changelog**: https://github.com/chengkangzai/filament-mui-date-picker/compare/v3.1.0...v3.1.1
@@ -66,6 +88,7 @@ composer update chengkangzai/filament-mui-date-picker
 php artisan filament:assets
 
 
+
 ```
 **Full Changelog**: https://github.com/chengkangzai/filament-mui-date-picker/compare/v3.0.4...v3.1.0
 
@@ -92,6 +115,7 @@ A date now counts as finished only after:
 ```bash
 composer update chengkangzai/filament-mui-date-picker
 php artisan filament:assets
+
 
 
 
@@ -125,6 +149,7 @@ Re-publish the assets after updating:
 ```bash
 composer update chengkangzai/filament-mui-date-picker
 php artisan filament:assets
+
 
 
 
@@ -192,6 +217,7 @@ This release consolidates the previously separate `4.x` and `5.x` branches into 
 
 ```bash
 composer require chengkangzai/filament-mui-date-picker "^3.0"
+
 
 
 
