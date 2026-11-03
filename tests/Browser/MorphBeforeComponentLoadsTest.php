@@ -17,6 +17,12 @@ use function Amp\delay;
  * This package's assets are deliberately NOT published: Pest's server serves public/ files
  * directly, so leaving them out routes them through Laravel, where the component script is
  * held back with a non-blocking Amp delay (the Livewire update is answered meanwhile).
+ *
+ * Runs in CI's "Browser tests" job. Locally:
+ *   composer require --dev pestphp/pest-plugin-browser:^4.0 --no-update && composer update
+ *   npm ci && npx playwright install chromium
+ *   vendor/bin/pest --group=browser
+ * The plugin is not in composer.json because it refuses to boot Pest without Playwright.
  */
 beforeEach(function () {
     Artisan::call('filament:assets');

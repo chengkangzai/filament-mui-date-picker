@@ -81,7 +81,10 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # pest-plugin-browser is installed here only: it refuses to boot Pest at all without
+          # node_modules/.bin/playwright, which the PHP-only matrix jobs do not have.
           composer require "laravel/framework:13.*" "orchestra/testbench:11.*" --no-interaction --no-update
+          composer require --dev "pestphp/pest-plugin-browser:^4.0" --no-interaction --no-update
           composer update --prefer-stable --prefer-dist --no-interaction
           npm ci
 
